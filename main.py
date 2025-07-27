@@ -5,7 +5,7 @@ app = Flask(__name__)
 @app.route('/callback', methods=['POST'])
 def webhook():
     data = request.json
-    print("🔔 Webhook受信:", data)  # ← Webhook受信内容をログに表示
+    print("🔔 Webhook受信:", data)
     return "OK", 200
 
 @app.route('/', methods=['GET'])
