@@ -51,6 +51,21 @@ def reply_message(account_id, message_text):
     if not access_token:
         return
 
+    # キーワード応答パターン
+    keyword = message_text.strip().lower()
+
+    if "天気" in keyword:
+        reply_text = "今日の天気は晴れの予報です☀️（※ダミー情報）"
+    elif "時間" in keyword:
+        reply_text = f"現在の時刻は {time.strftime('%H:%M:%S')} です。"
+    elif "ありがとう" in keyword:
+        reply_text = "どういたしまして😊"
+    elif "こんにちは" in keyword or "こんばんは" in keyword:
+        reply_text = "こんにちは！何かご用ですか？"
+    else:
+        reply_text = f"「{message_text}」を受け取りました。内容を確認します📩"
+
+    # 返信用API
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -59,12 +74,14 @@ def reply_message(account_id, message_text):
     data = {
         "content": {
             "type": "text",
-            "text": f"「{message_text}」を受け取りました！こちらはBOTの返信です😊"
+            "text": reply_text
         }
     }
+
     response = requests.post(url, headers=headers, json=data)
     print("📩 返信ステータス:", response.status_code, flush=True)
     print("📨 返信レスポンス:", response.text, flush=True)
+
 
 
 # === Webhook受信エンドポイント ===
