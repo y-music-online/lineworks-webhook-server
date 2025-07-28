@@ -1,3 +1,5 @@
 Flask==2.3.3
-PyJWT[crypto]==2.10.1
 requests==2.32.4
+pyjwt[crypto]==2.10.1
+sqlite3 ; (標準ライブラリなので追加インストールは不要)
+
