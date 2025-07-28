@@ -50,13 +50,13 @@ def reply_message(account_id, message_text):
     access_token = get_access_token()
     if not access_token:
         return
-    url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/messages"
+
+    url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
     }
     data = {
-        "accountId": account_id,
         "content": {
             "type": "text",
             "text": f"「{message_text}」を受け取りました！こちらはBOTの返信です😊"
@@ -65,6 +65,7 @@ def reply_message(account_id, message_text):
     response = requests.post(url, headers=headers, json=data)
     print("📩 返信ステータス:", response.status_code, flush=True)
     print("📨 返信レスポンス:", response.text, flush=True)
+
 
 # === Webhook受信エンドポイント ===
 @app.route('/callback', methods=['POST'])
