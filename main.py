@@ -51,7 +51,7 @@ def reply_message(account_id, message_text):
     if not access_token:
         return
 
-    url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
+    url = f"https://www.worksapis.com/v1.0/bots/{"500246708"}/users/{account_id}/messages"
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
