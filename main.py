@@ -73,7 +73,7 @@ def webhook():
         data = request.get_json(force=True)
         print("🔔 Webhook受信データ:", data, flush=True)
 
-        account_id = data["source"]["accountId"]
+        account_id = data["source"]["userId"]
         user_message = data["content"]["text"]
         reply_message(account_id, user_message)
 
