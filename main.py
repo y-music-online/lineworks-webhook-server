@@ -10,7 +10,7 @@ CLIENT_ID = "e4LbDIJ47FULUbcfyQfJ"
 SERVICE_ACCOUNT = "ty2ra.serviceaccount@yllc"
 CLIENT_SECRET = "s4smYc7WnC"
 BOT_ID = "500246708"
-PRIVATE_KEY_PATH = "private_20250727231316.key"
+PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
 # === アクセストークン取得 ===
@@ -25,7 +25,7 @@ def get_access_token():
         "aud": TOKEN_URL
     }
     with open(PRIVATE_KEY_PATH, "rb") as f:
-        private_20250727231316.key = f.read()
+        private_20250728164431.key = f.read()
     jwt_token = jwt.encode(payload, private_key, algorithm='RS256')
     if isinstance(jwt_token, bytes):
         jwt_token = jwt_token.decode('utf-8')
