@@ -63,6 +63,32 @@ def get_access_token():
         print("❌ アクセストークン取得失敗:", response.text, flush=True)
         return None
 
+
+import sqlite3
+from datetime import datetime
+
+
+
+# === 保存 ===
+def save_message(user_id, message):
+    try:
+        conn = sqlite3.connect("messages.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
+            (user_id, message, datetime.now().isoformat())
+        )
+        conn.commit()
+        conn.close()
+        print("💾 メッセージ保存完了")
+    except Exception as e:
+        print("❌ メッセージ保存エラー:", e)
+
+
+
+
+
+
 # === ユーザーへ返信 ===
 def reply_message(account_id, message_text):
     access_token = get_access_token()
