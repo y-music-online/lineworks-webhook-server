@@ -2,6 +2,9 @@ from flask import Flask, request
 import time
 import jwt
 import requests
+import sqlite3
+from datetime import datetime
+
 
 app = Flask(__name__)
 
@@ -12,6 +15,21 @@ CLIENT_SECRET = "s4smYc7WnC"
 BOT_ID = "6808645"
 PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
+
+# === DB保存関数 ===
+def save_message(user_id, message_text):
+    conn = sqlite3.connect("messages.db")
+    cursor = conn.cursor()
+    timestamp = datetime.now().isoformat()
+    cursor.execute(
+        "INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
+        (user_id, message_text, timestamp)
+    )
+    conn.commit()
+    conn.close()
+
+
+
 
 # === アクセストークン取得 ===
 def get_access_token():
@@ -93,7 +111,9 @@ def webhook():
 
         account_id = data["source"]["userId"]
         user_message = data["content"]["text"]
+        save_message(account_id, user_message)
         reply_message(account_id, user_message)
+
 
     except Exception as e:
         print("⚠️ 受信エラー:", e, flush=True)
