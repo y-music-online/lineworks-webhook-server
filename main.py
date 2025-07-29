@@ -17,17 +17,21 @@ PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
 # === DB保存関数 ===
+# === DB保存関数 ===
 def save_message(user_id, message_text):
-    conn = sqlite3.connect("messages.db")
-    cursor = conn.cursor()
-    timestamp = datetime.now().isoformat()
-    cursor.execute(
-        "INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
-        (user_id, message_text, timestamp)
-    )
-    conn.commit()
-    conn.close()
-
+    try:
+        conn = sqlite3.connect("messages.db")
+        cursor = conn.cursor()
+        timestamp = datetime.now().isoformat()
+        cursor.execute(
+            "INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
+            (user_id, message_text, timestamp)
+        )
+        conn.commit()
+        conn.close()
+        print("💾 メッセージ保存完了")
+    except Exception as e:
+        print("❌ メッセージ保存エラー:", e)
 
 
 
@@ -66,24 +70,6 @@ def get_access_token():
 
 import sqlite3
 from datetime import datetime
-
-
-
-# === 保存 ===
-def save_message(user_id, message):
-    try:
-        conn = sqlite3.connect("messages.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
-            (user_id, message, datetime.now().isoformat())
-        )
-        conn.commit()
-        conn.close()
-        print("💾 メッセージ保存完了")
-    except Exception as e:
-        print("❌ メッセージ保存エラー:", e)
-
 
 
 
