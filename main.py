@@ -19,6 +19,26 @@ TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
 DATA_FILE = "formatted_reflex_text.txt"  # 整形済みのテキストファイル
 
+
+# === DB初期化処理 ===
+def init_db():
+    conn = sqlite3.connect("messages.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        message TEXT,
+        timestamp TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+    print("✅ DB初期化完了")
+
+
+
+
 # === 反射区データ読み込み ===
 def load_reflex_data():
     reflex_map = {}
@@ -90,15 +110,24 @@ def reply_message(account_id, message_text):
             reply_text = f"🔎 {reflex}の反射区情報:\n{info}"
             break
 
-    # 返信送信
 
+ # 返信送信
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
-    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "content": {
+            "type": "text",
+            "text": reply_text
+        }
+    }
 
-    requests.post(url, headers=headers, json={
-        "content": {"type": "text", "text": reply_text}
-    })
-    print("📩 BOT返信完了", flush=True)
+    response = requests.post(url, headers=headers, json=data)
+    print("📩 返信ステータス:", response.status_code, flush=True)
+    print("📨 返信レスポンス:", response.text, flush=True)
+
 
 # === Webhook ===
 @app.route('/callback', methods=['POST'])
