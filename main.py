@@ -17,14 +17,18 @@ PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
 
-# === 2) 反射区データ（辞書形式） ===
-REFLEX_MAP = {
-    "腎臓": "体内の余分な水分や老廃物を排出。むくみ、冷えに関連。",
-    "肩こり": "肩・頸部の反射区を刺激し、肩こりや緊張型頭痛を緩和。",
-    "胃": "消化不良、胃もたれを改善。土踏まず中央部を刺激。",
-    "腰痛": "背骨・腰椎の反射区を刺激し、腰の不調を改善。",
-    "花粉症": "鼻、前頭洞の反射区を刺激し、鼻炎、副鼻腔炎の症状を軽減。"
-}
+# === 反射区データ読み込み ===
+def load_reflex_data():
+    reflex_map = {}
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split(" ", 1)
+                if len(parts) == 2:
+                    reflex_map[parts[0]] = parts[1]
+    except Exception as e:
+        print("⚠️ 反射区データ読み込みエラー:", e)
+    return reflex_map
 
 
 
@@ -86,42 +90,28 @@ from datetime import datetime
 
 
 
-# === ユーザーへ返信 ===
+# === ユーザーへの返信 ===
 def reply_message(account_id, message_text):
     access_token = get_access_token()
     if not access_token:
         return
 
-    # キーワード応答パターン
-    keyword = message_text.strip().lower()
+    reflex_map = load_reflex_data()
+    reply_text = "該当する反射区情報が見つかりませんでした。"
 
-    if "天気" in keyword:
-        reply_text = "今日の天気は晴れの予報です☀️（※ダミー情報）"
-    elif "時間" in keyword:
-        reply_text = f"現在の時刻は {time.strftime('%H:%M:%S')} です。"
-    elif "ありがとう" in keyword:
-        reply_text = "どういたしまして😊"
-    elif "こんにちは" in keyword or "こんばんは" in keyword:
-        reply_text = "こんにちは！何かご用ですか？"
-    else:
-        reply_text = f"「{message_text}」を受け取りました。内容を確認します📩"
+    for reflex, info in reflex_map.items():
+        if reflex in message_text:
+            reply_text = f"🔎 {reflex}の反射区情報:\n{info}"
+            break
 
-    # 返信用API
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "content": {
-            "type": "text",
-            "text": reply_text
-        }
-    }
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
 
-    response = requests.post(url, headers=headers, json=data)
-    print("📩 返信ステータス:", response.status_code, flush=True)
-    print("📨 返信レスポンス:", response.text, flush=True)
+    requests.post(url, headers=headers, json={
+        "content": {"type": "text", "text": reply_text}
+    })
+    print("📩 BOT返信完了", flush=True)
+
 
 
 
