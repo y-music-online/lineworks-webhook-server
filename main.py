@@ -8687,12 +8687,10 @@ for reflex, info in reflex_map.items():
     user_message = message_text.strip().replace(" ", "").lower()
     reply_text = "⚠️ 該当する反射区情報が見つかりませんでした。"
 
-    for reflex, info in reflex_map.items():
-        if reflex.replace(" ", "").lower() in user_message:
-            # 「|」を改行に変換して見やすく表示
-            formatted_info = info.replace("|", "n")
-            reply_text = f"🦶【{reflex}の反射区】\n\n{info}"
-            break
+ for reflex, info in reflex_map.items():
+    if reflex.replace(" ", "").lower() in user_message:
+        reply_text = f"🦶【{reflex}の反射区】\n\n{info}"
+        break
 
 
 
