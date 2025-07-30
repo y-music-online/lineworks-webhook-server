@@ -80,13 +80,17 @@ def reply_message(account_id, message_text):
     if not access_token:
         return
 
-    reflex_map = load_reflex_data()
-    reply_text = "該当する反射区情報が見つかりませんでした。"
+       # ユーザー入力を整形（全角スペース削除・小文字化）
+    user_message = message_text.strip().replace(" ", "").lower()
 
+    # 反射区検索
+    reply_text = "⚠️ 該当する反射区情報が見つかりませんでした。"
     for reflex, info in reflex_map.items():
-        if reflex in message_text:
+        if reflex.replace(" ", "").lower() in user_message:
             reply_text = f"🔎 {reflex}の反射区情報:\n{info}"
             break
+
+    # 返信送信
 
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
     headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
