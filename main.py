@@ -36,17 +36,8 @@ def init_db():
     conn.close()
     print("✅ DB初期化完了")
 
-# === 反射区データを起動時にロード ===
-reflex_map = {}
-
-@app.before_first_request
-def load_data():
-    global reflex_map
-    reflex_map = load_reflex_data()
-    print("✅ 反射区データ読み込み完了:", len(reflex_map), "件")
 
 
-# === 反射区データ読み込み ===
 def load_reflex_data():
     reflex_map = {}
     try:
@@ -55,9 +46,26 @@ def load_reflex_data():
                 parts = line.strip().split(" ", 1)
                 if len(parts) == 2:
                     reflex_map[parts[0]] = parts[1]
-    except Exception as e:
-        print("⚠️ 反射区データ読み込みエラー:", e)
+        print(f"✅ {len(reflex_map)} 件の反射区データを読み込みました", flush=True)
+    except FileNotFoundError:
+        print("❌ 反射区データファイルが見つかりません", flush=True)
     return reflex_map
+
+
+
+
+
+# --- Flaskアプリ定義後に追加 ---
+reflex_map = {}
+
+def load_data():
+    global reflex_map
+    reflex_map = load_reflex_data()
+    print("✅ 反射区データ読み込み完了:", len(reflex_map), "件", flush=True)
+
+# サーバー起動時に1回だけ実行
+load_data()
+init_db()
 
 
 # === DB保存 ===
@@ -156,4 +164,6 @@ def health_check():
     return "LINE WORKS 反射区BOT サーバー稼働中"
 
 if __name__ == '__main__':
+    init_db()   # ←ここで自動テーブル作成
+    load_data() # ←反射区データも自動読み込み
     app.run(host='0.0.0.0', port=10000)
