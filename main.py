@@ -36,7 +36,14 @@ def init_db():
     conn.close()
     print("✅ DB初期化完了")
 
+# === 反射区データを起動時にロード ===
+reflex_map = {}
 
+@app.before_first_request
+def load_data():
+    global reflex_map
+    reflex_map = load_reflex_data()
+    print("✅ 反射区データ読み込み完了:", len(reflex_map), "件")
 
 
 # === 反射区データ読み込み ===
@@ -51,6 +58,7 @@ def load_reflex_data():
     except Exception as e:
         print("⚠️ 反射区データ読み込みエラー:", e)
     return reflex_map
+
 
 # === DB保存 ===
 def save_message(user_id, message_text):
