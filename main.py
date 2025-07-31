@@ -103,22 +103,36 @@ def get_access_token():
         print("❌ get_access_tokenエラー:", e, flush=True)
         return None
 
+
+# === ファイルからキーワード検索（名前と説明文の両方を対象） ===
+def search_reflex_info(user_message):
+    try:
+        with open("formatted_reflex_text.txt", "r", encoding="utf-8") as file:
+            text_data = file.read()
+
+        # 入力を小文字化（日本語はそのまま）
+        keyword = user_message.strip().lower()
+        for section in text_data.split("\n\n"):
+            section_lower = section.lower()
+            # 部分一致（反射区名・説明文両方を含めて検索）
+            if keyword in section_lower:
+                return section.strip()
+
+        return "⚠️ 該当する反射区情報が見つかりませんでした。"
+    except Exception as e:
+        print("❌ ファイル検索エラー:", e, flush=True)
+        return "⚠️ データ読み込みエラーが発生しました。"
+
+
+
+
 # === BOTから返信 ===
 def reply_message(account_id, message_text):
-    global reflex_map
     access_token = get_access_token()
     if not access_token:
         return
 
-    user_message = message_text.strip().replace(" ", "").lower()
-    reply_text = "⚠️ 該当する反射区情報が見つかりませんでした。"
-
-    for reflex, info in reflex_map.items():
-        if reflex.replace(" ", "").lower() in user_message:
-            # 改行対応
-            formatted_info = info.replace("|", "\n").replace("\\n", "\n")
-            reply_text = f"🦶【{reflex}の反射区】\n\n{formatted_info}"
-            break
+    reply_text = search_reflex_info(message_text)
 
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
     headers = {
@@ -163,5 +177,4 @@ def health_check():
 # --- サーバー起動処理 ---
 if __name__ == '__main__':
     init_db()
-    reflex_map = load_reflex_data()
     app.run(host='0.0.0.0', port=10000)
