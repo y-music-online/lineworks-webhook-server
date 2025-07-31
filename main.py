@@ -110,19 +110,16 @@ def search_reflex_info(user_message):
         with open("formatted_reflex_text.txt", "r", encoding="utf-8") as file:
             text_data = file.read()
 
-        # 入力を小文字化（日本語はそのまま）
         keyword = user_message.strip().lower()
-        for section in text_data.split("\n\n"):
-            section_lower = section.lower()
-            # 部分一致（反射区名・説明文両方を含めて検索）
-            if keyword in section_lower:
-                return section.strip()
-
+        idx = text_data.lower().find(keyword)
+        if idx != -1:
+            start = max(0, text_data.rfind("\n\n", 0, idx))
+            end = text_data.find("\n\n", idx)
+            return text_data[start:end].strip()
         return "⚠️ 該当する反射区情報が見つかりませんでした。"
     except Exception as e:
         print("❌ ファイル検索エラー:", e, flush=True)
         return "⚠️ データ読み込みエラーが発生しました。"
-
 
 
 
