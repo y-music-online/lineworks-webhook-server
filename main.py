@@ -15,6 +15,9 @@ BOT_ID = "6808645"
 PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
+# === データファイル ===
+DATA_FILE = "formatted_reflex_text.txt"
+reflex_map = {}
 
 # === DB初期化 ===
 def init_db():
@@ -35,6 +38,19 @@ def init_db():
     except Exception as e:
         print("❌ DB初期化エラー:", e, flush=True)
 
+# === 反射区データ読み込み ===
+def load_reflex_data():
+    reflex_map = {}
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split(" ", 1)
+                if len(parts) == 2:
+                    reflex_map[parts[0]] = parts[1]
+        print(f"✅ 反射区データ {len(reflex_map)} 件読み込み", flush=True)
+    except FileNotFoundError:
+        print("❌ 反射区データファイルが見つかりません", flush=True)
+    return reflex_map
 
 # === メッセージ保存 ===
 def save_message(user_id, message):
@@ -50,7 +66,6 @@ def save_message(user_id, message):
         print("💾 メッセージ保存完了", flush=True)
     except Exception as e:
         print("❌ メッセージ保存エラー:", e, flush=True)
-
 
 # === アクセストークン取得 ===
 def get_access_token():
@@ -88,42 +103,22 @@ def get_access_token():
         print("❌ get_access_tokenエラー:", e, flush=True)
         return None
 
-
-# === ファイル全文検索（反射区名+説明文） ===
-def search_reflex_info(user_message):
-    try:
-        with open("formatted_reflex_text.txt", "r", encoding="utf-8") as file:
-            text_data = file.read()
-
-        keyword = user_message.strip().lower()
-        text_lower = text_data.lower()
-
-        idx = text_lower.find(keyword)
-        if idx != -1:
-            # 段落単位で取得
-            start = text_data.rfind("\n\n", 0, idx)
-            if start == -1:
-                start = 0
-            end = text_data.find("\n\n", idx)
-            if end == -1:
-                end = len(text_data)
-            result = text_data[start:end].strip()
-            result = result.replace("\\n", "\n")  # ← 改行に変換
-            return result
-
-        return "⚠️ 該当する反射区情報が見つかりませんでした。"
-    except Exception as e:
-        print("❌ ファイル検索エラー:", e, flush=True)
-        return "⚠️ データ読み込みエラーが発生しました。"
-
-
 # === BOTから返信 ===
 def reply_message(account_id, message_text):
+    global reflex_map
     access_token = get_access_token()
     if not access_token:
         return
 
-    reply_text = search_reflex_info(message_text)
+    user_message = message_text.strip().replace(" ", "").lower()
+    reply_text = "⚠️ 該当する反射区情報が見つかりませんでした。"
+
+    for reflex, info in reflex_map.items():
+        if reflex.replace(" ", "").lower() in user_message:
+            # 改行対応
+            formatted_info = info.replace("|", "\n").replace("\\n", "\n")
+            reply_text = f"🦶【{reflex}の反射区】\n\n{formatted_info}"
+            break
 
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
     headers = {
@@ -140,7 +135,6 @@ def reply_message(account_id, message_text):
     response = requests.post(url, headers=headers, json=data)
     print("📩 返信ステータス:", response.status_code, flush=True)
     print("📨 返信レスポンス:", response.text, flush=True)
-
 
 # === Webhook受信 ===
 @app.route('/callback', methods=['POST'])
@@ -162,13 +156,12 @@ def webhook():
         print("⚠️ 受信エラー:", e, flush=True)
     return "OK", 200
 
-
 @app.route('/', methods=['GET'])
 def health_check():
     return "LINE WORKS 反射区BOT サーバー稼働中"
 
-
 # --- サーバー起動処理 ---
 if __name__ == '__main__':
     init_db()
+    reflex_map = load_reflex_data()
     app.run(host='0.0.0.0', port=10000)
