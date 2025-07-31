@@ -104,23 +104,31 @@ def get_access_token():
         return None
 
 
-# === ファイルからキーワード検索（名前と説明文の両方を対象） ===
+# === ファイル全文検索（反射区名+説明文） ===
 def search_reflex_info(user_message):
     try:
         with open("formatted_reflex_text.txt", "r", encoding="utf-8") as file:
             text_data = file.read()
 
         keyword = user_message.strip().lower()
-        idx = text_data.lower().find(keyword)
+        text_lower = text_data.lower()
+
+        idx = text_lower.find(keyword)
         if idx != -1:
-            start = max(0, text_data.rfind("\n\n", 0, idx))
+            # 段落単位で取得
+            start = text_data.rfind("\n\n", 0, idx)
+            if start == -1:
+                start = 0
             end = text_data.find("\n\n", idx)
-            return text_data[start:end].strip()
+            if end == -1:
+                end = len(text_data)
+            result = text_data[start:end].strip()
+            return result.replace("\\n", "\n")  # ← ここで改行に変換
+
         return "⚠️ 該当する反射区情報が見つかりませんでした。"
     except Exception as e:
         print("❌ ファイル検索エラー:", e, flush=True)
         return "⚠️ データ読み込みエラーが発生しました。"
-
 
 
 # === BOTから返信 ===
