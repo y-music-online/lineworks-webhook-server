@@ -131,6 +131,8 @@ def reply_message(account_id, message_text):
 
     reply_text = search_reflex_info(message_text)
 
+ reply_text = reply_text.replace("\\n", "\n")
+
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
     headers = {
         "Authorization": f"Bearer {access_token}",
