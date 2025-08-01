@@ -1,5 +1,6 @@
+openai==1.35.3
 Flask==2.3.3
-requests==2.32.4
-pyjwt[crypto]==2.10.1
-openai==1.37.0
+requests
+pyjwt
 cryptography
+sqlite3-binary
