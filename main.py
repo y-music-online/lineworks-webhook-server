@@ -12,17 +12,13 @@ from openai import OpenAI
 # ================================
 load_dotenv()
 
-# LINE WORKS API設定
 SERVER_ID = os.getenv("SERVER_ID")
 PRIVATE_KEY_FILE = os.getenv("PRIVATE_KEY_FILE", "private_2048.key")
 BOT_ID = os.getenv("BOT_ID")
 API_ID = os.getenv("API_ID")
-
-# OpenAI API設定
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Flaskアプリ作成
+client = OpenAI(api_key=OPENAI_API_KEY)
 app = Flask(__name__)
 
 # ================================
@@ -107,12 +103,11 @@ def callback():
         user_id = body["source"]["userId"]
         user_message = body["content"]["text"]
 
-        # OpenAI から応答を取得
-        ai_response = generate_ai_response(user_message)
+        # AIの応答のみ利用
+        reply_text = generate_ai_response(user_message)
 
-        # LINE WORKS BOTから返信
         token = get_access_token()
-        reply_message(token, BOT_ID, user_id, ai_response)
+        reply_message(token, BOT_ID, user_id, reply_text)
 
     return "OK", 200
 
