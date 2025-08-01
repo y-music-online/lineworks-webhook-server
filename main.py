@@ -13,7 +13,7 @@ from openai import OpenAI
 load_dotenv()
 
 SERVER_ID = os.getenv("SERVER_ID")
-PRIVATE_KEY_FILE = os.getenv("PRIVATE_KEY_FILE", "private_2048.key")
+PRIVATE_KEY_FILE = os.getenv("PRIVATE_KEY_FILE", "private_20250728164431.key")
 BOT_ID = os.getenv("BOT_ID")
 API_ID = os.getenv("API_ID")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
