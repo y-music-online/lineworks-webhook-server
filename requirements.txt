@@ -1,6 +1,8 @@
-openai==1.35.3
-Flask==2.3.3
+
+
+flask
 requests
-pyjwt
+python-dotenv
 cryptography
-sqlite3-binary
+openai>=1.0.0
+

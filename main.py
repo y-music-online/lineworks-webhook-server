@@ -18,37 +18,32 @@ BOT_ID = os.getenv("BOT_ID")
 API_ID = os.getenv("API_ID")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# 新しいOpenAIクライアント
 client = OpenAI(api_key=OPENAI_API_KEY)
+
 app = Flask(__name__)
 
 # ================================
-# JWT生成関数
+# JWT生成
 # ================================
 def create_jwt():
     with open(PRIVATE_KEY_FILE, "r") as f:
         private_key = f.read()
-
-    headers = {
-        "alg": "RS256",
-        "typ": "JWT"
-    }
     payload = {
         "iss": SERVER_ID,
         "sub": SERVER_ID,
         "iat": int(time.time()),
         "exp": int(time.time()) + 60 * 60,
     }
-    token = jwt.encode(payload, private_key, algorithm="RS256", headers=headers)
-    return token
+    headers = {"alg": "RS256", "typ": "JWT"}
+    return jwt.encode(payload, private_key, algorithm="RS256", headers=headers)
 
 # ================================
 # AccessToken取得
 # ================================
 def get_access_token():
     url = "https://auth.worksmobile.com/oauth2/v2.0/token"
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {
         "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
         "assertion": create_jwt(),
@@ -58,7 +53,7 @@ def get_access_token():
     return res.json().get("access_token")
 
 # ================================
-# AI応答生成
+# AI応答生成（新API対応）
 # ================================
 def generate_ai_response(user_message):
     try:
@@ -84,10 +79,7 @@ def reply_message(access_token, bot_id, account_id, content):
         "Authorization": f"Bearer {access_token}"
     }
     data = {
-        "content": {
-            "type": "text",
-            "text": content
-        }
+        "content": {"type": "text", "text": content}
     }
     requests.post(url, headers=headers, json=data)
 
@@ -103,7 +95,7 @@ def callback():
         user_id = body["source"]["userId"]
         user_message = body["content"]["text"]
 
-        # AIの応答のみ利用
+        # AIの応答を取得
         reply_text = generate_ai_response(user_message)
 
         token = get_access_token()
@@ -117,4 +109,3 @@ def callback():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
