@@ -5,6 +5,8 @@ import requests
 import sqlite3
 from datetime import datetime
 import re
+import openai
+import os
 
 app = Flask(__name__)
 
@@ -15,6 +17,9 @@ CLIENT_SECRET = "s4smYc7WnC"
 BOT_ID = "6808645"
 PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
+
+# === OpenAI APIキーをRender環境変数から読み込む ===
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # === DB初期化 ===
 def init_db():
@@ -76,19 +81,15 @@ def get_access_token():
         print("❌ アクセストークン取得失敗:", response.text, flush=True)
         return None
 
-# === 反射区情報検索（関連語・部分一致対応） ===
+# === 反射区情報検索 ===
 def search_reflex_info(user_message):
     try:
         with open("formatted_reflex_text.txt", "r", encoding="utf-8") as file:
             text_data = file.read()
 
         text_lower = text_data.lower()
-        user_input = user_message.strip().lower()
+        keywords = re.split(r'[ ,、。]', user_message.strip().lower())
 
-        # 複数の関連キーワードをスペース・記号区切りで分割
-        keywords = re.split(r'[ ,、。]', user_input)
-
-        # 最初にマッチした段落を返す
         for kw in keywords:
             if not kw:
                 continue
@@ -100,24 +101,41 @@ def search_reflex_info(user_message):
                 end = text_data.find("\n\n", idx)
                 if end == -1:
                     end = len(text_data)
-                result = text_data[start:end].strip()
-                return result.replace("\\n", "\n")
-
+                return text_data[start:end].strip().replace("\\n", "\n")
         return None
     except Exception as e:
-        print("❌ ファイル検索エラー:", e, flush=True)
+        print("❌ ファイル検索エラー:", e)
         return None
 
-# === ユーザーへ返信（反射区のみ対応） ===
+# === ChatGPTを使った回答生成 ===
+def ask_chatgpt(question):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "あなたは足つぼ反射区の専門家です。質問に日本語で答えてください。"},
+                {"role": "user", "content": question}
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
+        return response.choices[0].message["content"].strip()
+    except Exception as e:
+        print("❌ ChatGPTエラー:", e)
+        return "AIによる回答を取得できませんでした。"
+
+# === ユーザーへ返信 ===
 def reply_message(account_id, message_text):
     access_token = get_access_token()
     if not access_token:
         return
 
+    # まず反射区データを検索
     reply_text = search_reflex_info(message_text)
 
+    # 見つからなければChatGPTに質問
     if not reply_text:
-        reply_text = "⚠️ 該当する反射区情報が見つかりませんでした。"
+        reply_text = ask_chatgpt(message_text)
 
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
     headers = {
@@ -154,7 +172,7 @@ def webhook():
 
 @app.route('/', methods=['GET'])
 def health_check():
-    return "LINE WORKS 反射区BOT サーバー稼働中"
+    return "LINE WORKS 反射区BOT（ChatGPT対応版）サーバー稼働中"
 
 if __name__ == '__main__':
     init_db()
