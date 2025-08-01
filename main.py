@@ -1,3 +1,5 @@
+import sys
+sys.stdout.reconfigure(line_buffering=True)
 import os
 import json
 import time
@@ -88,26 +90,28 @@ def reply_message(access_token, bot_id, account_id, content):
 # ================================
 @app.route("/callback", methods=["POST"])
 def callback():
-    body = request.json
-    print("🔔 Webhook受信データ:", body)   # 受信ログ
+    try:
+        body = request.json
+        print("🔔 Webhook受信データ:", body)
 
-    if body["type"] == "message":
-        user_id = body["source"]["userId"]
-        user_message = body["content"]["text"]
+        if body["type"] == "message":
+            user_id = body["source"]["userId"]
+            user_message = body["content"]["text"]
+            print(f"📨 受信メッセージ: {user_message}")
 
-        print(f"📨 受信メッセージ: {user_message}")  # 追加①
+            reply_text = generate_ai_response(user_message)
+            print(f"🤖 AI応答: {reply_text}")
 
-        # AI応答生成
-        reply_text = generate_ai_response(user_message)
-        print(f"🤖 AI応答: {reply_text}")  # 追加②
+            token = get_access_token()
+            print(f"🔑 AccessToken取得: {str(token)[:10]}...")
 
-        token = get_access_token()
-        print(f"🔑 AccessToken取得: {str(token)[:10]}...")  # 追加③
-
-        reply_message(token, BOT_ID, user_id, reply_text)
-        print("📩 返信送信完了")  # 追加④
+            reply_message(token, BOT_ID, user_id, reply_text)
+            print("📩 返信送信完了")
+    except Exception as e:
+        print("❌ エラー発生:", e)
 
     return "OK", 200
+
 
 
 # ================================
