@@ -4,9 +4,8 @@ import jwt
 import requests
 import sqlite3
 from datetime import datetime
-import re
-import openai
 import os
+from openai import OpenAI
 
 app = Flask(__name__)
 
@@ -18,31 +17,19 @@ BOT_ID = "6808645"
 PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
-# === OpenAI APIキーを環境変数から読み込む ===
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# === OpenAI API設定 ===
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# === DB初期化 ===
-def init_db():
-    conn = sqlite3.connect("messages.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT,
-        message TEXT,
-        timestamp TEXT
-    )
-    """)
-    conn.commit()
-    conn.close()
-
-# === メッセージ保存 ===
+# === DB保存関数 ===
 def save_message(user_id, message_text):
     try:
         conn = sqlite3.connect("messages.db")
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
-                       (user_id, message_text, datetime.now().isoformat()))
+        timestamp = datetime.now().isoformat()
+        cursor.execute(
+            "INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
+            (user_id, message_text, timestamp)
+        )
         conn.commit()
         conn.close()
         print("💾 メッセージ保存完了")
@@ -81,48 +68,30 @@ def get_access_token():
         print("❌ アクセストークン取得失敗:", response.text, flush=True)
         return None
 
-# === 反射区情報検索 ===
-def search_reflex_info(user_message):
+# === AIに質問を送信 ===
+def ask_ai(question):
+    prompt = f"""
+あなたは足つぼ反射区の専門家です。
+ユーザーからの質問に対して、足つぼや反射区に関連する情報を日本語で丁寧に答えてください。
+反射区に関係ない質問が来た場合は「このBOTは足つぼ反射区に関する質問専用です」と答えてください。
+
+質問:
+{question}
+"""
+
     try:
-        with open("formatted_reflex_text.txt", "r", encoding="utf-8") as file:
-            text_data = file.read()
-
-        text_lower = text_data.lower()
-        keywords = re.split(r'[ ,、。]', user_message.strip().lower())
-
-        for kw in keywords:
-            if not kw:
-                continue
-            idx = text_lower.find(kw)
-            if idx != -1:
-                start = text_data.rfind("\n\n", 0, idx)
-                if start == -1:
-                    start = 0
-                end = text_data.find("\n\n", idx)
-                if end == -1:
-                    end = len(text_data)
-                return text_data[start:end].strip().replace("\\n", "\n")
-        return None
-    except Exception as e:
-        print("❌ ファイル検索エラー:", e)
-        return None
-
-# === ChatGPTを使った回答生成 ===
-def ask_chatgpt(question):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "あなたは足つぼ反射区の専門家です。質問に日本語で詳しく回答してください。"},
-                {"role": "user", "content": question}
+                {"role": "system", "content": "あなたは足つぼ反射区の専門家として答えます。"},
+                {"role": "user", "content": prompt}
             ],
-            max_tokens=500,
-            temperature=0.7
+            temperature=0.5
         )
-        return response.choices[0].message["content"].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        print("❌ ChatGPTエラー:", e)
-        return "AIによる回答を取得できませんでした。"
+        print("AIエラー:", e)
+        return "⚠️ AIによる回答を取得できませんでした。"
 
 # === ユーザーへ返信 ===
 def reply_message(account_id, message_text):
@@ -130,12 +99,7 @@ def reply_message(account_id, message_text):
     if not access_token:
         return
 
-    # 1️⃣ まず反射区データを検索
-    reply_text = search_reflex_info(message_text)
-
-    # 2️⃣ 見つからなければChatGPTに質問
-    if not reply_text:
-        reply_text = ask_chatgpt(message_text)
+    ai_reply = ask_ai(message_text)
 
     url = f"https://www.worksapis.com/v1.0/bots/{BOT_ID}/users/{account_id}/messages"
     headers = {
@@ -145,7 +109,7 @@ def reply_message(account_id, message_text):
     data = {
         "content": {
             "type": "text",
-            "text": reply_text
+            "text": ai_reply
         }
     }
 
@@ -153,7 +117,7 @@ def reply_message(account_id, message_text):
     print("📩 返信ステータス:", response.status_code, flush=True)
     print("📨 返信レスポンス:", response.text, flush=True)
 
-# === Webhookエンドポイント ===
+# === Webhook受信エンドポイント ===
 @app.route('/callback', methods=['POST'])
 def webhook():
     try:
@@ -162,7 +126,6 @@ def webhook():
 
         account_id = data["source"]["userId"]
         user_message = data["content"]["text"]
-
         save_message(account_id, user_message)
         reply_message(account_id, user_message)
 
@@ -172,8 +135,7 @@ def webhook():
 
 @app.route('/', methods=['GET'])
 def health_check():
-    return "LINE WORKS 反射区BOT（ChatGPT対応版）サーバー稼働中"
+    return "LINE WORKS Webhook Server is running."
 
 if __name__ == '__main__':
-    init_db()
     app.run(host='0.0.0.0', port=10000)
