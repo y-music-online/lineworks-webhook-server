@@ -18,7 +18,7 @@ BOT_ID = "6808645"
 PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
-# === OpenAI APIキーをRender環境変数から読み込む ===
+# === OpenAI APIキーを環境変数から読み込む ===
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # === DB初期化 ===
@@ -113,7 +113,7 @@ def ask_chatgpt(question):
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "あなたは足つぼ反射区の専門家です。質問に日本語で答えてください。"},
+                {"role": "system", "content": "あなたは足つぼ反射区の専門家です。質問に日本語で詳しく回答してください。"},
                 {"role": "user", "content": question}
             ],
             max_tokens=500,
@@ -130,10 +130,10 @@ def reply_message(account_id, message_text):
     if not access_token:
         return
 
-    # まず反射区データを検索
+    # 1️⃣ まず反射区データを検索
     reply_text = search_reflex_info(message_text)
 
-    # 見つからなければChatGPTに質問
+    # 2️⃣ 見つからなければChatGPTに質問
     if not reply_text:
         reply_text = ask_chatgpt(message_text)
 
