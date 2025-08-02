@@ -25,13 +25,14 @@ client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 # === formatted_reflex_text.txt読み込み ===
 reflex_data = {}
 try:
-    with open("formatted_reflex_text.txt", "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip().replace("\\n", " ")
-            parts = line.strip().split(" ", 1)
-            if len(parts) == 2:
-                keyword, description = parts
-                reflex_data[keyword] = description
+with open("formatted_reflex_text.txt", "r", encoding="utf-8") as f:
+    for line in f:
+        # 「\n」を本来の改行に変換
+        line = line.strip().replace("\\n", "\n")
+        parts = line.split(" ", 1)
+        if len(parts) == 2:
+            keyword, description = parts
+            reflex_data[keyword] = description
     print("✅ formatted_reflex_text.txt を読み込みました", flush=True)
 except Exception as e:
     print("⚠️ 反射区データ読み込みエラー:", e, flush=True)
