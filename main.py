@@ -18,6 +18,7 @@ PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 PORT = int(os.environ.get("PORT", 10000))
 
+
 # === OpenAI設定 ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY2")
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
@@ -25,17 +26,18 @@ client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 # === formatted_reflex_text.txt読み込み ===
 reflex_data = {}
 try:
-with open("formatted_reflex_text.txt", "r", encoding="utf-8") as f:
-    for line in f:
-        # 「\n」を本来の改行に変換
-        line = line.strip().replace("\\n", "\n")
-        parts = line.split(" ", 1)
-        if len(parts) == 2:
-            keyword, description = parts
-            reflex_data[keyword] = description
+    with open("formatted_reflex_text.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            # 「\n」を本来の改行に変換
+            line = line.strip().replace("\\n", "\n")
+            parts = line.split(" ", 1)
+            if len(parts) == 2:
+                keyword, description = parts
+                reflex_data[keyword] = description
     print("✅ formatted_reflex_text.txt を読み込みました", flush=True)
 except Exception as e:
     print("⚠️ 反射区データ読み込みエラー:", e, flush=True)
+
 
 
 
