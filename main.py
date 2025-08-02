@@ -9,7 +9,19 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
+# === LINE WORKS 認証情報 ===
+CLIENT_ID = "e4LbDIJ47FULUbcfyQfJ"
+SERVICE_ACCOUNT = "ty2ra.serviceaccount@yllc"
+CLIENT_SECRET = "s4smYc7WnC"
+BOT_ID = "6808645"
+PRIVATE_KEY_PATH = "private_20250728164431.key"
+TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
+# === OpenAI API設定 ===
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY2")
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+
+# === DB初期化 ===
 def init_db():
     try:
         conn = sqlite3.connect("messages.db")
@@ -27,40 +39,6 @@ def init_db():
         print("✅ messagesテーブルを確認/作成完了", flush=True)
     except Exception as e:
         print("❌ DB初期化エラー:", e, flush=True)
-
-# 起動時にDBを初期化
-init_db()
-
-
-
-
-# === LINE WORKS 認証情報 ===
-CLIENT_ID = "e4LbDIJ47FULUbcfyQfJ"
-SERVICE_ACCOUNT = "ty2ra.serviceaccount@yllc"
-CLIENT_SECRET = "s4smYc7WnC"
-BOT_ID = "6808645"
-PRIVATE_KEY_PATH = "private_20250728164431.key"
-TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
-
-# === OpenAI API設定（新キー対応） ===
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY2")
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-# === DB初期化（messagesテーブルがなければ作成） ===
-def init_db():
-    conn = sqlite3.connect("messages.db")
-    cursor = conn.cursor()
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT,
-        message TEXT,
-        timestamp TEXT
-    )
-    ''')
-    conn.commit()
-    conn.close()
-    print("✅ messagesテーブルを確認/作成完了", flush=True)
 
 # === メッセージ保存 ===
 def save_message(user_id, message_text):
@@ -113,26 +91,18 @@ def get_access_token():
         print("⚠️ アクセストークン処理エラー:", e, flush=True)
         return None
 
-# === AI応答生成 ===
+# === AI応答生成（安全版） ===
 def ask_ai(question):
     if not OPENAI_API_KEY:
         print("⚠️ OPENAI_API_KEYが設定されていません", flush=True)
-        return "AIキーが設定されていません。"
+        return "現在AIサービスは利用できません。"
 
-    prompt = f"""
-あなたは足つぼ反射区の専門家です。
-ユーザーからの質問に対して、足つぼや反射区に関連する情報を日本語で丁寧に答えてください。
-反射区に関係ない質問が来た場合は「このBOTは足つぼ反射区に関する質問専用です」と答えてください。
-
-質問:
-{question}
-"""
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "あなたは足つぼ反射区の専門家として答えます。"},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": question}
             ],
             temperature=0.5
         )
@@ -140,8 +110,9 @@ def ask_ai(question):
         print(f"🤖 AI応答: {ai_reply}", flush=True)
         return ai_reply
     except Exception as e:
-        print("AIエラー:", e, flush=True)
-        return "⚠️ AIによる回答を取得できませんでした。"
+        print("⚠️ AIエラー:", e, flush=True)
+        # APIエラーや429エラー時は固定メッセージを返す
+        return "現在AIサーバーが利用制限中です。しばらく待ってからお試しください。"
 
 # === ユーザーへ返信 ===
 def reply_message(account_id, message_text):
@@ -194,4 +165,3 @@ if __name__ == '__main__':
     init_db()
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
-
