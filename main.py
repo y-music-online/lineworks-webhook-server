@@ -91,7 +91,7 @@ def get_access_token():
         print("⚠️ アクセストークン処理エラー:", e, flush=True)
         return None
 
-# === AI応答生成（安全版） ===
+# === AI応答生成（429対応版） ===
 def ask_ai(question):
     if not OPENAI_API_KEY:
         print("⚠️ OPENAI_API_KEYが設定されていません", flush=True)
@@ -106,12 +106,18 @@ def ask_ai(question):
             ],
             temperature=0.5
         )
+
+        # 予期せぬエラーフィールドがある場合は固定メッセージ
+        if not hasattr(response, "choices") or len(response.choices) == 0:
+            print("⚠️ OpenAI応答が不正です", flush=True)
+            return "現在AIサーバーが利用制限中です。しばらく待ってからお試しください。"
+
         ai_reply = response.choices[0].message.content.strip()
         print(f"🤖 AI応答: {ai_reply}", flush=True)
         return ai_reply
+
     except Exception as e:
         print("⚠️ AIエラー:", e, flush=True)
-        # APIエラーや429エラー時は固定メッセージを返す
         return "現在AIサーバーが利用制限中です。しばらく待ってからお試しください。"
 
 # === ユーザーへ返信 ===
