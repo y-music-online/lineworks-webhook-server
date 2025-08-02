@@ -9,17 +9,31 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-# === LINE WORKS 認証情報 ===
+# === LINE WORKS BOT設定 ===
 CLIENT_ID = "e4LbDIJ47FULUbcfyQfJ"
 SERVICE_ACCOUNT = "ty2ra.serviceaccount@yllc"
 CLIENT_SECRET = "s4smYc7WnC"
 BOT_ID = "6808645"
 PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
+PORT = int(os.environ.get("PORT", 10000))
 
-# === OpenAI API設定 ===
+# === OpenAI設定 ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY2")
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+
+# === formatted_reflex_text.txt読み込み ===
+reflex_data = {}
+try:
+    with open("formatted_reflex_text.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split(" ", 1)
+            if len(parts) == 2:
+                keyword, description = parts
+                reflex_data[keyword] = description
+    print("✅ formatted_reflex_text.txt を読み込みました", flush=True)
+except Exception as e:
+    print("⚠️ 反射区データ読み込みエラー:", e, flush=True)
 
 # === DB初期化 ===
 def init_db():
@@ -91,45 +105,49 @@ def get_access_token():
         print("⚠️ アクセストークン処理エラー:", e, flush=True)
         return None
 
-# === AI応答生成（429対応版） ===
-
-
+# === AI応答処理 ===
 def ask_ai(question):
-    # まず、質問内容が足つぼ関連かどうかをチェック
-    keywords = ["足つぼ", "反射区", "ドクターフット"]
-    if not any(keyword in question for keyword in keywords):
-        print("⚠️ 非対応の質問を受信:", question, flush=True)
-        return "このBOTはドクターフットと足つぼの反射区に関する質問専用です。"
+    # 1️⃣ ローカル辞書を優先
+    for key in reflex_data:
+        if key in question:
+            print(f"📌 ローカルデータから回答: {key}", flush=True)
+            return reflex_data[key]
 
+    # 2️⃣ OpenAIを利用
     if not OPENAI_API_KEY:
-        print("⚠️ OPENAI_API_KEYが設定されていません", flush=True)
         return "現在AIサービスは利用できません。"
 
     try:
+        SYSTEM_PROMPT = """
+        あなたは足つぼ反射区の専門Botです。ユーザーから部位名や症状名を入力された場合、
+        その反射区の位置と、刺激による効果・効能を簡潔に説明してください。
+
+        【ルール】
+        - 回答は反射区の解説に限定してください。
+        - 反射区と関係のない話題には
+        「申し訳ありませんが、反射区に関すること以外にはお答えできません。」
+        - 医療行為や診断はせず、健康維持・リラクゼーション目的で説明してください。
+        """
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "あなたは足つぼ反射区の専門家として答えます。"},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": question}
             ],
-            temperature=0.5
+            temperature=0.3
         )
 
         if not hasattr(response, "choices") or len(response.choices) == 0:
-            print("⚠️ OpenAI応答が不正です", flush=True)
             return "現在AIサーバーが利用制限中です。しばらく待ってからお試しください。"
 
-        ai_reply = response.choices[0].message.content.strip()
-        print(f"🤖 AI応答: {ai_reply}", flush=True)
-        return ai_reply
+        return response.choices[0].message.content.strip()
 
     except Exception as e:
         print("⚠️ AIエラー:", e, flush=True)
         return "現在AIサーバーが利用制限中です。しばらく待ってからお試しください。"
 
-
-
-# === ユーザーへ返信 ===
+# === LINE WORKS返信処理 ===
 def reply_message(account_id, message_text):
     access_token = get_access_token()
     if not access_token:
@@ -178,5 +196,4 @@ def health_check():
 
 if __name__ == '__main__':
     init_db()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=PORT)
