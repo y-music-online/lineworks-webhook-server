@@ -92,7 +92,15 @@ def get_access_token():
         return None
 
 # === AI応答生成（429対応版） ===
+
+
 def ask_ai(question):
+    # まず、質問内容が足つぼ関連かどうかをチェック
+    keywords = ["足つぼ", "反射区", "ドクターフット"]
+    if not any(keyword in question for keyword in keywords):
+        print("⚠️ 非対応の質問を受信:", question, flush=True)
+        return "このBOTはドクターフットと足つぼの反射区に関する質問専用です。"
+
     if not OPENAI_API_KEY:
         print("⚠️ OPENAI_API_KEYが設定されていません", flush=True)
         return "現在AIサービスは利用できません。"
@@ -107,7 +115,6 @@ def ask_ai(question):
             temperature=0.5
         )
 
-        # 予期せぬエラーフィールドがある場合は固定メッセージ
         if not hasattr(response, "choices") or len(response.choices) == 0:
             print("⚠️ OpenAI応答が不正です", flush=True)
             return "現在AIサーバーが利用制限中です。しばらく待ってからお試しください。"
@@ -119,6 +126,8 @@ def ask_ai(question):
     except Exception as e:
         print("⚠️ AIエラー:", e, flush=True)
         return "現在AIサーバーが利用制限中です。しばらく待ってからお試しください。"
+
+
 
 # === ユーザーへ返信 ===
 def reply_message(account_id, message_text):
