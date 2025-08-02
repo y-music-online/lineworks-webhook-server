@@ -17,20 +17,34 @@ BOT_ID = "6808645"
 PRIVATE_KEY_PATH = "private_20250728164431.key"
 TOKEN_URL = "https://auth.worksmobile.com/oauth2/v2.0/token"
 
-# === OpenAI API設定（OPENAI_API_KEY2 または OPENAI_API_KEY を使用） ===
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY2") or os.getenv("OPENAI_API_KEY")
+# === OpenAI API設定（新キー対応） ===
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY2")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# === DB保存関数 ===
+# === DB初期化（messagesテーブルがなければ作成） ===
+def init_db():
+    conn = sqlite3.connect("messages.db")
+    cursor = conn.cursor()
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        message TEXT,
+        timestamp TEXT
+    )
+    ''')
+    conn.commit()
+    conn.close()
+    print("✅ messagesテーブルを確認/作成完了", flush=True)
+
+# === メッセージ保存 ===
 def save_message(user_id, message_text):
     try:
         conn = sqlite3.connect("messages.db")
         cursor = conn.cursor()
         timestamp = datetime.now().isoformat()
-        cursor.execute(
-            "INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
-            (user_id, message_text, timestamp)
-        )
+        cursor.execute("INSERT INTO messages (user_id, message, timestamp) VALUES (?, ?, ?)",
+                       (user_id, message_text, timestamp))
         conn.commit()
         conn.close()
         print("💾 メッセージ保存完了", flush=True)
@@ -74,8 +88,12 @@ def get_access_token():
         print("⚠️ アクセストークン処理エラー:", e, flush=True)
         return None
 
-# === AIに質問を送信 ===
+# === AI応答生成 ===
 def ask_ai(question):
+    if not OPENAI_API_KEY:
+        print("⚠️ OPENAI_API_KEYが設定されていません", flush=True)
+        return "AIキーが設定されていません。"
+
     prompt = f"""
 あなたは足つぼ反射区の専門家です。
 ユーザーからの質問に対して、足つぼや反射区に関連する情報を日本語で丁寧に答えてください。
@@ -125,7 +143,7 @@ def reply_message(account_id, message_text):
     print("📩 返信ステータス:", response.status_code, flush=True)
     print("📨 返信レスポンス:", response.text, flush=True)
 
-# === Webhook受信エンドポイント ===
+# === Webhookエンドポイント ===
 @app.route('/callback', methods=['POST'])
 def webhook():
     try:
@@ -148,5 +166,7 @@ def health_check():
     return "LINE WORKS Webhook Server is running."
 
 if __name__ == '__main__':
+    init_db()
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
+
