@@ -9,6 +9,31 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
+
+def init_db():
+    try:
+        conn = sqlite3.connect("messages.db")
+        cursor = conn.cursor()
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            message TEXT,
+            timestamp TEXT
+        )
+        ''')
+        conn.commit()
+        conn.close()
+        print("✅ messagesテーブルを確認/作成完了", flush=True)
+    except Exception as e:
+        print("❌ DB初期化エラー:", e, flush=True)
+
+# 起動時にDBを初期化
+init_db()
+
+
+
+
 # === LINE WORKS 認証情報 ===
 CLIENT_ID = "e4LbDIJ47FULUbcfyQfJ"
 SERVICE_ACCOUNT = "ty2ra.serviceaccount@yllc"
