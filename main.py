@@ -1,5 +1,3 @@
-import sys
-sys.stdout.reconfigure(line_buffering=True)
 import os
 import json
 import time
@@ -7,7 +5,6 @@ import jwt
 import requests
 from flask import Flask, request
 from dotenv import load_dotenv
-from openai import OpenAI
 
 # ================================
 # 設定読み込み
@@ -18,10 +15,6 @@ SERVER_ID = os.getenv("SERVER_ID")
 PRIVATE_KEY_FILE = os.getenv("PRIVATE_KEY_FILE", "private_20250728164431.key")
 BOT_ID = os.getenv("BOT_ID")
 API_ID = os.getenv("API_ID")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# 新しいOpenAIクライアント
-client = OpenAI(api_key=OPENAI_API_KEY)
 
 app = Flask(__name__)
 
@@ -55,23 +48,6 @@ def get_access_token():
     return res.json().get("access_token")
 
 # ================================
-# AI応答生成（新API対応）
-# ================================
-def generate_ai_response(user_message):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "あなたは親切で役立つアシスタントです。"},
-                {"role": "user", "content": user_message}
-            ],
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print("AI応答エラー:", e)
-        return "AIによる回答を取得できませんでした。"
-
-# ================================
 # メッセージ返信
 # ================================
 def reply_message(access_token, bot_id, account_id, content):
@@ -83,36 +59,29 @@ def reply_message(access_token, bot_id, account_id, content):
     data = {
         "content": {"type": "text", "text": content}
     }
-    requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data)
+    print("📩 返信ステータス:", response.status_code)
+    print("📨 返信レスポンス:", response.text)
 
 # ================================
 # Webhookエンドポイント
 # ================================
 @app.route("/callback", methods=["POST"])
 def callback():
-    try:
-        body = request.json
-        print("🔔 Webhook受信データ:", body)
+    body = request.json
+    print("🔔 Webhook受信データ:", body)
 
-        if body["type"] == "message":
-            user_id = body["source"]["userId"]
-            user_message = body["content"]["text"]
-            print(f"📨 受信メッセージ: {user_message}")
+    if body["type"] == "message":
+        user_id = body["source"]["userId"]
+        user_message = body["content"]["text"]
 
-            reply_text = generate_ai_response(user_message)
-            print(f"🤖 AI応答: {reply_text}")
+        print(f"📨 受信メッセージ: {user_message}")
 
-            token = get_access_token()
-            print(f"🔑 AccessToken取得: {str(token)[:10]}...")
-
-            reply_message(token, BOT_ID, user_id, reply_text)
-            print("📩 返信送信完了")
-    except Exception as e:
-        print("❌ エラー発生:", e)
+        # 固定メッセージを返信
+        token = get_access_token()
+        reply_message(token, BOT_ID, user_id, "✅ Webhook受信OK")
 
     return "OK", 200
-
-
 
 # ================================
 # メイン
